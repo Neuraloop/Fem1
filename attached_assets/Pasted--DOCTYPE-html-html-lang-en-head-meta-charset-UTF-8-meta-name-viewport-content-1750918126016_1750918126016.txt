@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fem-MultiModel - FEA Solution Engine</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/feather-icons@4.29.0/feather.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Shooting Stars Background -->
+    <div class="shooting-stars">
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+        <div class="shooting-star"></div>
+    </div>
+
+    <div class="container-fluid min-vh-100 d-flex flex-column">
+        <!-- Header -->
+        <header class="text-center">
+            <div class="logo-container mb-4">
+                <div class="app-icon">
+                    <svg width="80" height="80" viewBox="0 0 40 40" fill="currentColor">
+                        <path d="M20 2L37 12v16L20 38 3 28V12L20 2zm0 4L7 14v12l13 8 13-8V14L20 6z"/>
+                        <path d="M12 16l8 4 8-4v8l-8 4-8-4v-8z"/>
+                    </svg>
+                </div>
+            </div>
+            <h1 class="main-title">Hey, let's solve your<br>FEA problem!</h1>
+        </header>
+
+        <!-- Main Interface -->
+        <div class="main-content">
+            <div class="input-container">
+                <!-- Chat Messages (Hidden initially) -->
+                <div id="chatMessages" class="chat-messages" style="display: none;">
+                    <!-- Messages will be dynamically added here -->
+                </div>
+
+                <!-- Main Input Form -->
+                <form id="problemForm" class="main-form">
+                    <div class="input-box">
+                        <textarea 
+                            class="main-input" 
+                            id="problemInput" 
+                            rows="1"
+                            placeholder="Describe your FEA problem here..."
+                            required></textarea>
+                        <div class="input-actions">
+                            <button type="button" class="attach-btn">
+                                <i data-feather="paperclip"></i>
+                                Attach
+                            </button>
+                            <button type="submit" class="build-btn" id="solveBtn">
+                                Solve it →
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Example buttons -->
+                <div class="suggestion-buttons">
+                    <button class="suggestion-btn" data-example="1D bar structural analysis">1D Bar Analysis</button>
+                    <button class="suggestion-btn" data-example="Beam bending analysis">Beam Bending</button>
+                    <button class="suggestion-btn" data-example="Truss structure analysis">Truss Analysis</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Status Bar -->
+        <div class="model-status-bar">
+            <div class="container">
+                <div class="d-flex justify-content-center align-items-center">
+                    <div class="model-indicator me-4">
+                        <span class="model-name">Gemini 1.5</span>
+                        <span class="badge model-badge" id="gemini15Status">Ready</span>
+                    </div>
+                    <div class="model-indicator me-4">
+                        <span class="model-name">Gemini 2.5</span>
+                        <span class="badge model-badge" id="gemini25Status">Ready</span>
+                    </div>
+                    <div class="status-indicator">
+                        <span class="badge system-status">System Online</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons@4.29.0/feather.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Initialize Feather icons
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        });
+    </script>
+</body>
+</html>

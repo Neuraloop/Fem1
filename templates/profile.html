@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Fem-MultiModel{% endblock %}
+
+{% block content %}
+<div class="container-fluid min-vh-100 py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Profile Header -->
+                <div class="profile-header text-center mb-5">
+                    <div class="app-icon mx-auto mb-3">
+                        <svg width="60" height="60" viewBox="0 0 40 40" fill="currentColor">
+                            <path d="M20 2L37 12v16L20 38 3 28V12L20 2zm0 4L7 14v12l13 8 13-8V14L20 6z"/>
+                            <path d="M12 16l8 4 8-4v8l-8 4-8-4v-8z"/>
+                        </svg>
+                    </div>
+                    <h1 class="profile-title">API Configuration</h1>
+                    <p class="profile-subtitle">Manage your AI model API keys</p>
+                </div>
+
+                <!-- API Key Management -->
+                <div class="api-key-section">
+                    <!-- Add New API Key -->
+                    <div class="card api-card mb-4">
+                        <div class="card-header">
+                            <h5><i data-feather="plus-circle"></i> Add API Key</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('save_api_key') }}">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">Service</label>
+                                            <select class="form-control" name="service_name" required>
+                                                <option value="">Select Service</option>
+                                                <option value="gemini">Google Gemini</option>
+                                                <!-- Template for future models (commented out) -->
+                                                <!--
+                                                <option value="openai">OpenAI</option>
+                                                <option value="anthropic">Anthropic Claude</option>
+                                                <option value="cohere">Cohere</option>
+                                                <option value="huggingface">Hugging Face</option>
+                                                -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">API Key</label>
+                                            <input type="password" class="form-control" name="api_key" 
+                                                   placeholder="Enter your API key" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="mb-3">
+                                            <label class="form-label">&nbsp;</label>
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                <i data-feather="save"></i> Save
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Existing API Keys -->
+                    <div class="card api-card">
+                        <div class="card-header">
+                            <h5><i data-feather="key"></i> Configured API Keys</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if api_keys %}
+                                <div class="api-keys-list">
+                                    {% for key in api_keys %}
+                                    <div class="api-key-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="api-key-info">
+                                                <div class="service-name">
+                                                    {% if key.service_name == 'gemini' %}
+                                                        <i data-feather="cpu"></i> Google Gemini
+                                                    {% elif key.service_name == 'openai' %}
+                                                        <i data-feather="brain"></i> OpenAI
+                                                    {% elif key.service_name == 'anthropic' %}
+                                                        <i data-feather="message-square"></i> Anthropic Claude
+                                                    {% else %}
+                                                        <i data-feather="settings"></i> {{ key.service_name.title() }}
+                                                    {% endif %}
+                                                </div>
+                                                <div class="api-key-preview">
+                                                    {{ key.api_key[:8] }}...{{ key.api_key[-4:] }}
+                                                </div>
+                                                <div class="api-key-date">
+                                                    Added: {{ key.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                                </div>
+                                            </div>
+                                            <div class="api-key-actions">
+                                                <form method="POST" action="{{ url_for('delete_api_key', key_id=key.id) }}" 
+                                                      style="display: inline;" 
+                                                      onsubmit="return confirm('Are you sure you want to delete this API key?')">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                        <i data-feather="trash-2"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="empty-state text-center py-4">
+                                    <i data-feather="key" class="empty-icon"></i>
+                                    <h6>No API Keys Configured</h6>
+                                    <p class="text-muted">Add your first API key to start using the FEA solver</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="card api-card mt-4">
+                        <div class="card-header">
+                            <h5><i data-feather="info"></i> Instructions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="instructions">
+                                <h6>Google Gemini API Key</h6>
+                                <ol>
+                                    <li>Visit <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+                                    <li>Sign in with your Google account</li>
+                                    <li>Click "Create API Key"</li>
+                                    <li>Copy the generated API key and paste it above</li>
+                                </ol>
+                                
+                                <!-- Template for future model instructions (commented out) -->
+                                <!--
+                                <h6 class="mt-4">OpenAI API Key</h6>
+                                <ol>
+                                    <li>Visit <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></li>
+                                    <li>Sign in to your OpenAI account</li>
+                                    <li>Click "Create new secret key"</li>
+                                    <li>Copy the generated API key and paste it above</li>
+                                </ol>
+
+                                <h6 class="mt-4">Anthropic Claude API Key</h6>
+                                <ol>
+                                    <li>Visit <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a></li>
+                                    <li>Sign in to your Anthropic account</li>
+                                    <li>Navigate to API Keys section</li>
+                                    <li>Generate a new API key and paste it above</li>
+                                </ol>
+                                -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

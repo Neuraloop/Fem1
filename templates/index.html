@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid min-vh-100 d-flex flex-column">
+    <!-- Header -->
+    <header class="text-center">
+        <div class="logo-container mb-4">
+            <div class="app-icon">
+                <svg width="80" height="80" viewBox="0 0 40 40" fill="currentColor">
+                    <path d="M20 2L37 12v16L20 38 3 28V12L20 2zm0 4L7 14v12l13 8 13-8V14L20 6z"/>
+                    <path d="M12 16l8 4 8-4v8l-8 4-8-4v-8z"/>
+                </svg>
+            </div>
+        </div>
+        <h1 class="main-title">Hey, let's solve your<br>FEA problem!</h1>
+    </header>
+
+    <!-- Main Interface -->
+    <div class="main-content">
+        <div class="input-container">
+            <!-- Chat Messages (Hidden initially) -->
+            <div id="chatMessages" class="chat-messages" style="display: none;">
+                <!-- Messages will be dynamically added here -->
+            </div>
+
+            <!-- Status Display -->
+            <div id="statusDisplay" class="status-display" style="display: none;">
+                <div class="status-content">
+                    <div class="spinner-border text-light me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span id="statusMessage">Processing...</span>
+                </div>
+            </div>
+
+            <!-- Main Input Form -->
+            <form id="problemForm" class="main-form">
+                <div class="input-box">
+                    <textarea 
+                        class="main-input" 
+                        id="problemInput" 
+                        rows="1"
+                        placeholder="Describe your FEA problem here..."
+                        required></textarea>
+                    <div class="input-actions">
+                        <button type="button" class="attach-btn">
+                            <i data-feather="paperclip"></i>
+                            Attach
+                        </button>
+                        <button type="submit" class="build-btn" id="solveBtn">
+                            Solve it →
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Example buttons -->
+            <div class="suggestion-buttons">
+                <button class="suggestion-btn" data-example="1D bar structural analysis">1D Bar Analysis</button>
+                <button class="suggestion-btn" data-example="Beam bending analysis">Beam Bending</button>
+                <button class="suggestion-btn" data-example="Truss structure analysis">Truss Analysis</button>
+            </div>
+
+            <!-- Individual Responses Section (Hidden initially) -->
+            <div id="individualResponses" class="individual-responses" style="display: none;">
+                <h3>Individual Model Responses</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="response-card">
+                            <h5>Gemini 1.5-Flash</h5>
+                            <div id="gemini15Content" class="response-content"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="response-card">
+                            <h5>Gemini 2.0-Flash</h5>
+                            <div id="gemini25Content" class="response-content"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Final Response Section (Hidden initially) -->
+            <div id="finalResponseSection" class="final-response-section" style="display: none;">
+                <h3>Final Combined Response</h3>
+                <div class="final-response-card">
+                    <div id="finalResponse" class="final-response-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Status Bar -->
+    <div class="model-status-bar">
+        <div class="container">
+            <div class="d-flex justify-content-center align-items-center">
+                <div class="model-indicator me-4">
+                    <span class="model-name">Gemini 1.5</span>
+                    <span class="badge model-badge" id="gemini15Status">Ready</span>
+                </div>
+                <div class="model-indicator me-4">
+                    <span class="model-name">Gemini 2.0</span>
+                    <span class="badge model-badge" id="gemini25Status">Ready</span>
+                </div>
+                <div class="status-indicator">
+                    <span class="badge system-status">System Online</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% endblock %}

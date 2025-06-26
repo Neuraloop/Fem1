@@ -1,0 +1,496 @@
+// Fem-MultiModel Frontend Application
+class FemMultiModel {
+    constructor() {
+        this.eventSource = null;
+        this.isProcessing = false;
+        this.currentResponse = '';
+        this.init();
+    }
+
+    formatResponse(text) {
+        // Format the response text with proper line breaks and styling
+        return text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    }
+
+    init() {
+        this.bindEvents();
+        this.showEmptyState();
+    }
+
+    bindEvents() {
+        const form = document.getElementById('problemForm');
+        const solveBtn = document.getElementById('solveBtn');
+        const textarea = document.getElementById('problemInput');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.solveProblem();
+        });
+
+        // Auto-resize textarea
+        textarea.addEventListener('input', () => {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        });
+
+        // Example problem selection
+        document.querySelectorAll('.suggestion-btn').forEach(item => {
+            item.addEventListener('click', () => {
+                const exampleType = item.dataset.example;
+                const exampleText = this.getExampleText(exampleType);
+                textarea.value = exampleText;
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+                textarea.focus();
+            });
+        });
+
+        // Attach button (example)
+        const attachBtn = document.querySelector('.attach-btn');
+        if (attachBtn) {
+            attachBtn.addEventListener('click', () => {
+                const exampleText = "A 1D bar of length 2 m, cross-sectional area A = 0.01 m², and Young's modulus E = 200 GPa is fixed at the left end and subjected to an axial force of 1000 N at the right end. Discretize the bar into 2 equal elements, and use linear shape functions. Find the displacement at the free end (right end).";
+                textarea.value = exampleText;
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+                textarea.focus();
+            });
+        }
+    }
+
+    getExampleText(type) {
+        const examples = {
+            '1D bar structural analysis': "A 1D bar of length 2 m, cross-sectional area A = 0.01 m², and Young's modulus E = 200 GPa is fixed at the left end and subjected to an axial force of 1000 N at the right end. Discretize the bar into 2 equal elements, and use linear shape functions. Find the displacement at the free end (right end).",
+            'Beam bending analysis': "A simply supported beam of length 4 m with rectangular cross-section (width = 0.2 m, height = 0.3 m) is subjected to a uniformly distributed load of 10 kN/m. The beam material has Young's modulus E = 25 GPa. Use beam elements to find the maximum deflection and bending moments.",
+            'Truss structure analysis': "Analyze a 2D truss structure with 3 nodes forming a triangular configuration. Node 1 is fixed, Node 2 is pinned, and Node 3 has a vertical load of 5000 N. All members have cross-sectional area A = 0.001 m² and Young's modulus E = 200 GPa. Find the nodal displacements and member forces."
+        };
+        return examples[type] || examples['1D bar structural analysis'];
+    }
+
+    showEmptyState() {
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.style.display = 'none';
+        chatMessages.classList.remove('active');
+        this.clearChatMessages();
+    }
+
+    hideEmptyState() {
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.style.display = 'block';
+        chatMessages.classList.add('active');
+    }
+
+    clearChatMessages() {
+        const chatMessages = document.getElementById('chatMessages');
+        // Remove all messages except empty state
+        const messages = chatMessages.querySelectorAll('.chat-message, .typing-indicator');
+        messages.forEach(msg => msg.remove());
+    }
+
+    addUserMessage(message) {
+        this.hideEmptyState();
+        const chatMessages = document.getElementById('chatMessages');
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message message-user';
+        messageDiv.innerHTML = `
+            <div class="message-bubble">
+                ${message}
+            </div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    addAssistantMessage(message, isTyping = false) {
+        const chatMessages = document.getElementById('chatMessages');
+        
+        if (isTyping) {
+            // Add typing indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+                <span>Processing with AI models...</span>
+            `;
+            chatMessages.appendChild(typingDiv);
+        } else {
+            // Remove typing indicator
+            const typingIndicator = chatMessages.querySelector('.typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+            
+            // Add assistant message
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message message-assistant';
+            messageDiv.innerHTML = `
+                <div class="message-bubble">
+                    ${message}
+                </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+        }
+        
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    showStatus(message) {
+        document.getElementById('statusDisplay').style.display = 'block';
+        document.getElementById('statusMessage').textContent = message;
+    }
+
+    hideStatus() {
+        document.getElementById('statusDisplay').style.display = 'none';
+    }
+
+    updateModelStatus(model, status) {
+        const statusMap = {
+            'ready': { class: 'model-badge', text: 'Ready' },
+            'processing': { class: 'model-badge processing', text: 'Processing...' },
+            'complete': { class: 'model-badge complete', text: 'Complete' },
+            'error': { class: 'model-badge error', text: 'Error' }
+        };
+
+        const statusInfo = statusMap[status] || statusMap['ready'];
+        
+        if (model === 'gemini-1.5') {
+            const badge = document.getElementById('gemini15Status');
+            badge.className = statusInfo.class;
+            badge.textContent = statusInfo.text;
+        } else if (model === 'gemini-2.5') {
+            const badge = document.getElementById('gemini25Status');
+            badge.className = statusInfo.class;
+            badge.textContent = statusInfo.text;
+        }
+    }
+
+    showIndividualResponses() {
+        document.getElementById('individualResponses').style.display = 'block';
+    }
+
+    showFinalResponse() {
+        document.getElementById('finalResponseSection').style.display = 'block';
+    }
+
+    displayGeminiResponse(content, model) {
+        if (model === '1.5') {
+            document.getElementById('gemini15Content').textContent = content;
+            this.updateModelStatus('gemini-1.5', 'complete');
+        } else if (model === '2.5') {
+            document.getElementById('gemini25Content').textContent = content;
+            this.updateModelStatus('gemini-2.5', 'complete');
+        }
+    }
+
+    appendToFinalResponse(content) {
+        const finalResponse = document.getElementById('finalResponse');
+        finalResponse.textContent += content;
+        
+        // Auto-scroll to bottom
+        finalResponse.scrollTop = finalResponse.scrollHeight;
+    }
+
+    clearFinalResponse() {
+        document.getElementById('finalResponse').textContent = '';
+    }
+
+    resetUI() {
+        // Reset model statuses
+        this.updateModelStatus('gemini-1.5', 'ready');
+        this.updateModelStatus('gemini-2.5', 'ready');
+        
+        // Clear previous responses
+        document.getElementById('gemini15Content').textContent = '';
+        document.getElementById('gemini25Content').textContent = '';
+        this.clearFinalResponse();
+        
+        // Hide sections
+        document.getElementById('individualResponses').style.display = 'none';
+        document.getElementById('finalResponseSection').style.display = 'none';
+    }
+
+    toggleSolveButton(disabled) {
+        const btn = document.getElementById('solveBtn');
+        const btnText = btn.querySelector('span') || btn.childNodes[btn.childNodes.length - 1];
+        
+        btn.disabled = disabled;
+        
+        if (disabled) {
+            btn.innerHTML = `
+                <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                Processing...
+            `;
+        } else {
+            btn.innerHTML = `
+                <i data-feather="play" class="me-2"></i>
+                Solve Problem
+            `;
+            // Re-initialize feather icons
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        }
+    }
+
+    async solveProblem() {
+        if (this.isProcessing) return;
+
+        const problemInput = document.getElementById('problemInput');
+        const problem = problemInput.value.trim();
+
+        if (!problem) {
+            this.showError('Please enter a problem description');
+            return;
+        }
+
+        this.isProcessing = true;
+        this.addUserMessage(problem);
+        this.addAssistantMessage('', true); // Show typing indicator
+        this.resetUI();
+        this.toggleSolveButton(true);
+
+        try {
+            // Close existing EventSource if any
+            if (this.eventSource) {
+                this.eventSource.close();
+            }
+
+            // Start streaming
+            const response = await fetch('/solve', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ problem: problem })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // Handle streaming response
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            this.handleStreamData(data);
+                        } catch (e) {
+                            console.error('Failed to parse stream data:', e);
+                        }
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.error('Error solving problem:', error);
+            this.showError(`Error: ${error.message}`);
+        } finally {
+            this.isProcessing = false;
+            this.toggleSolveButton(false);
+        }
+    }
+
+    handleStreamData(data) {
+        switch (data.type) {
+            case 'status':
+                this.showStatus(data.message);
+                
+                // Update model status based on message
+                if (data.message.includes('Gemini 1.5-flash')) {
+                    this.updateModelStatus('gemini-1.5', 'processing');
+                } else if (data.message.includes('Gemini 2.5-flash')) {
+                    this.updateModelStatus('gemini-2.5', 'processing');
+                }
+                break;
+
+            case 'gemini_response':
+                this.showIndividualResponses();
+                this.displayGeminiResponse(data.content, '1.5');
+                break;
+
+            case 'openai_response':
+                this.displayGeminiResponse(data.content, '2.5');
+                break;
+
+            case 'final_start':
+                this.hideStatus();
+                this.addAssistantMessage('', false); // Remove typing indicator
+                this.currentResponse = '';
+                break;
+
+            case 'final_chunk':
+                this.currentResponse += data.content;
+                // Update the last assistant message with the accumulated response
+                const lastMessage = document.querySelector('.chat-message.message-assistant:last-child .message-content');
+                if (lastMessage) {
+                    lastMessage.innerHTML = this.formatResponse(this.currentResponse);
+                }
+                // Auto-scroll to bottom
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                break;
+
+            case 'complete':
+                this.hideStatus();
+                console.log('Solution completed successfully!');
+                break;
+
+            case 'error':
+                this.showError(data.message);
+                break;
+
+            default:
+                console.log('Unknown stream data type:', data.type);
+        }
+    }
+
+    showError(message) {
+        this.hideStatus();
+        
+        // Create error alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+        alertDiv.innerHTML = `
+            <i data-feather="alert-circle" class="me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insert at top of results panel
+        const resultsPanel = document.querySelector('.results-panel .card-body');
+        resultsPanel.insertBefore(alertDiv, resultsPanel.firstChild);
+        
+        // Re-initialize feather icons
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+
+    showSuccess(message) {
+        // Create success alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+        alertDiv.innerHTML = `
+            <i data-feather="check-circle" class="me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insert at top of results panel
+        const resultsPanel = document.querySelector('.results-panel .card-body');
+        resultsPanel.insertBefore(alertDiv, resultsPanel.firstChild);
+        
+        // Re-initialize feather icons
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+        
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 3000);
+    }
+}
+
+// Initialize the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.femApp = new FemMultiModel();
+});
+
+// Health check function
+async function checkHealth() {
+    try {
+        const response = await fetch('/health');
+        const data = await response.json();
+        console.log('Health check:', data);
+        return data.status === 'healthy';
+    } catch (error) {
+        console.error('Health check failed:', error);
+        return false;
+    }
+}
+
+// Run health check on load
+checkHealth().then(isHealthy => {
+    const statusIndicator = document.querySelector('.status-indicator .badge');
+    if (isHealthy) {
+        statusIndicator.textContent = 'Online';
+        statusIndicator.className = 'badge bg-success';
+    } else {
+        statusIndicator.textContent = 'Offline';
+        statusIndicator.className = 'badge bg-danger';
+    }
+});
+
+// Template functions for future model extensions (commented)
+/*
+function addNewModel(modelName, modelId) {
+    // Add to model status panel
+    const modelStatusPanel = document.querySelector('.card-body');
+    const newModelStatus = document.createElement('div');
+    newModelStatus.className = 'model-status mb-3';
+    newModelStatus.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-medium">${modelName}</span>
+            <span class="badge bg-secondary" id="${modelId}Status">Ready</span>
+        </div>
+    `;
+    modelStatusPanel.appendChild(newModelStatus);
+
+    // Add to accordion
+    const accordion = document.getElementById('modelAccordion');
+    const newAccordionItem = document.createElement('div');
+    newAccordionItem.className = 'accordion-item';
+    newAccordionItem.innerHTML = `
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${modelId}Response">
+                <i data-feather="layers" class="me-2"></i>
+                ${modelName} Response
+            </button>
+        </h2>
+        <div id="${modelId}Response" class="accordion-collapse collapse" data-bs-parent="#modelAccordion">
+            <div class="accordion-body">
+                <div id="${modelId}Content" class="response-content"></div>
+            </div>
+        </div>
+    `;
+    accordion.appendChild(newAccordionItem);
+    
+    // Re-initialize feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+}
+
+// Example usage:
+// addNewModel('GPT-4', 'gpt4');
+// addNewModel('Claude-3', 'claude3');
+*/
